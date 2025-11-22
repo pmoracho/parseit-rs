@@ -1,0 +1,16 @@
+test_key: value
+formats:
+  sample:
+    category: Ejemplos.Sencillo
+    delimiter: ""
+    fields[3]{nombre,len,tipo,param1,param2}:
+      Tipo,1,table,tipo_operacion,""
+      Texto,30,string,"",""
+      Monto,15,zamount,"2",""
+tables:
+  tipo_operacion:
+    "1": Ingreso
+    "2": Gasto
+    "3": Transferencia
+shortcuts:
+  exit: q

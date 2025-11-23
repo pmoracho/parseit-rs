@@ -29,18 +29,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip tar
 
-      - name: Install MUSL Cross Compiler
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools
-
-      - name: Install Rust Toolchain & Target
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-
       # Obtener el nombre de la tag (ej: v1.0.0)
       - name: Get Tag Name
         id: tag
@@ -65,21 +53,18 @@ jobs:
 
   build_and_upload:
     name: Build & Upload (${{ matrix.target }})
-    # Aseguramos que la creación del release ocurra primero
     needs: [create_release]
-    # Usaremos una matriz para compilar para diferentes objetivos
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Build para Linux (x86_64)
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             asset_name_suffix: ""
             
-          - target: x86_64-pc-windows-gnu # <-- CAMBIO CLAVE
-            os: ubuntu-latest            # Compilamos en Linux para el target Windows
+          - target: x86_64-pc-windows-gnu 
+            os: ubuntu-latest 
             asset_name_suffix: ".exe"            
 
     steps:
@@ -98,7 +83,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mingw-w64
-          
+
+      - name: Install MUSL Cross Compiler
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
       # Compilar el proyecto en modo release para el target
       - name: Build Project
         run: |

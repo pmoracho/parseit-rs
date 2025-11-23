@@ -95,6 +95,7 @@ jobs:
       # Crear el nombre del archivo zip/tar.gz
       - name: Set Asset Names
         id: asset_vars
+        shell: bash
         run: |
           # Nombre del binario final (ej: parseit o parseit.exe)
           BINARY_FILE_NAME=${{ env.BINARY_NAME }}${{ matrix.asset_name_suffix }}

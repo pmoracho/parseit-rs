@@ -1,0 +1,125 @@
+name: Rust Release Multi-Plataforma
+
+on:
+  push:
+    tags:
+      # Disparar la acción solo cuando se hace push a tags que empiezan por 'v'
+      - 'v*' 
+
+env:
+  # Deshabilitar la comprobación de código en tiempo de compilación para acelerar la compilación
+  RUSTFLAGS: "-D warnings"
+  # Nombre del binario principal de tu proyecto. ¡AJUSTA ESTO!
+  # Si tu binario se llama 'parseit', usa parseit
+  BINARY_NAME: "parseit"
+
+jobs:
+  create_release:
+    name: Crear Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      # Obtener el nombre de la tag (ej: v1.0.0)
+      - name: Get Tag Name
+        id: tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+      # Crear el borrador del Release en GitHub
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          # Usamos el nombre de la tag como nombre del release
+          name: Release ${{ steps.tag.outputs.TAG_NAME }}
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          # Crea el release en borrador para adjuntar los assets antes de publicarlo
+          draft: true
+          # Generar notas de release automáticamente si no se proporcionan
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+  build_and_upload:
+    name: Build & Upload (${{ matrix.target }})
+    # Aseguramos que la creación del release ocurra primero
+    needs: [create_release]
+    # Usaremos una matriz para compilar para diferentes objetivos
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Build para Linux (x86_64)
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            asset_name_suffix: ""
+            
+          # Build para Windows (x86_64)
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            asset_name_suffix: ".exe" # Binarios de Windows tienen extensión .exe
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Instalar el objetivo de compilación (target) si es necesario
+      - name: Install Rust Toolchain & Target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          
+      # Compilar el proyecto en modo release para el target
+      - name: Build Project
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+        
+      # Crear el nombre del archivo zip/tar.gz
+      - name: Set Asset Names
+        id: asset_vars
+        run: |
+          # Nombre del binario final (ej: parseit o parseit.exe)
+          BINARY_FILE_NAME=${{ env.BINARY_NAME }}${{ matrix.asset_name_suffix }}
+          
+          # Nombre del archivo empaquetado (ej: parseit-x86_64-linux.tar.gz)
+          ARCHIVE_NAME=${{ env.BINARY_NAME }}-${{ matrix.target }}
+          
+          # Determinar si usar .zip o .tar.gz
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            ARCHIVE_FILE_NAME="${ARCHIVE_NAME}.zip"
+          else
+            ARCHIVE_FILE_NAME="${ARCHIVE_NAME}.tar.gz"
+          fi
+          
+          echo "BINARY_FILE_NAME=$BINARY_FILE_NAME" >> $GITHUB_OUTPUT
+          echo "ARCHIVE_FILE_NAME=$ARCHIVE_FILE_NAME" >> $GITHUB_OUTPUT
+          
+      # Empaquetar el binario (tar.gz para Linux, zip para Windows)
+      - name: Package Release Binary
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          
+          # Usamos un if/else para manejar diferentes formatos de compresión
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            # Windows (zip)
+            zip ${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }} ${{ steps.asset_vars.outputs.BINARY_FILE_NAME }}
+          else
+            # Linux (tar.gz)
+            tar -czvf ${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }} ${{ steps.asset_vars.outputs.BINARY_FILE_NAME }}
+          fi
+          
+      # Subir el asset al Release creado anteriormente
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ needs.create_release.outputs.release_upload_url }}
+          asset_path: target/${{ matrix.target }}/release/${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }}
+          asset_name: ${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,102 +7,98 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 
 /// Formatea una cadena numérica de entrada basada en el tipo de campo y las opciones de salida.
-/// 
-/// La salida siempre utiliza el formato Latino/Continental (ej: 1.234.567,89).
 fn format_field_value(
     raw_value: &str,
     field_type: &str, // Ej: "zamount", "amount", "numeric"
-    numeric_format_flag: bool, // Reformatear con separadores S/N
+    format_numeric: bool, // Reformatear con separadores S/N
     decimal_places: usize, // Cantidad de decimales implícitos/deseados
-) -> String {
+    ) -> String {
     let raw_trimmed = raw_value.trim();
 
     if raw_trimmed.is_empty() {
-        // Valor por defecto para campos vacíos
         return if decimal_places > 0 { "0,00".to_string() } else { "0".to_string() };
     }
 
     let mut number_string_for_decimal: String;
     let mut final_decimal_places = decimal_places;
-
+    let field_type_lower = field_type.to_lowercase();
+    
     // --- FASE 1: CONVERSIÓN A CADENA ESTÁNDAR (Punto decimal '.') ---
-    match field_type.to_lowercase().as_str() {
+    match field_type_lower.as_str() {
         
-        // 1. ZAMOUNT (Decimal implícito): Los últimos N dígitos son decimales.
         "zamount" => {
-            // Eliminar ceros a la izquierda, excepto si el único dígito es cero.
-            let trimmed_no_leading_zeros = raw_trimmed.trim_start_matches('0');
-            let integer_part = if trimmed_no_leading_zeros.is_empty() {
-                "0"
-            } else if trimmed_no_leading_zeros.len() <= final_decimal_places {
-                let padding = "0".repeat(final_decimal_places - trimmed_no_leading_zeros.len());
-                &format!("0{}{}", padding, trimmed_no_leading_zeros)
+            let num_str = raw_trimmed; 
+            let len = num_str.len();
+
+            // 1. Asegurarse de que el número sea lo suficientemente largo para tener una parte entera.
+            // Si el número es más corto que los decimales, rellenamos con ceros a la izquierda.
+            let integer_part = if len < final_decimal_places {
+                // Rellenamos hasta que la parte entera tenga al menos un dígito '0'
+                let padding = "0".repeat(final_decimal_places - len + 1);
+                format!("{}{}", padding, num_str)
             } else {
-                &trimmed_no_leading_zeros.to_string()
+                num_str.to_string()
             };
 
             let len = integer_part.len();
+            
+            // 2. Calcular el índice del punto decimal.
+            // Aquí len siempre será >= final_decimal_places, por lo que checked_sub no será None.
             let index_of_dot = len.checked_sub(final_decimal_places).unwrap_or(0);
 
             let int_part = &integer_part[0..index_of_dot];
             let dec_part = &integer_part[index_of_dot..];
+            
+            // 3. Crear la cadena final: eliminamos los ceros a la izquierda de la parte entera
+            let final_int_part = int_part.trim_start_matches('0');
+            
+            // Si la parte entera después de trim está vacía (ej: 000.12), usamos "0"
+            let final_int_part = if final_int_part.is_empty() {
+                "0"
+            } else {
+                final_int_part
+            };
 
-            number_string_for_decimal = format!("{}.{}", int_part, dec_part);
+            number_string_for_decimal = format!("{}.{}", final_int_part, dec_part);
         },
         
-        // 2. AMOUNT (Decimal explícito) y NUMERIC
-        _ => {
-            // Asumimos que los separadores de miles son puntos o comas que deben eliminarse
-            // y que el separador decimal es el último punto o coma.
-            
-            // Reemplazar todos los separadores de miles (punto o coma) y dejar solo el decimal
-            let cleaned = raw_trimmed
+        "amount" | "numeric" => {
+            // Eliminar separadores de miles y convertir el último separador a punto decimal
+            number_string_for_decimal = raw_trimmed
                 .replace('.', "")
                 .replace(',', ".");
-                
-            number_string_for_decimal = cleaned;
-
-            // Si es 'amount' o 'numeric', el número de decimales deseados es el que se requiere para la salida
-            // Si el número de decimales en el string es 0, no forzamos decimales.
+            
+            // Ajustar decimales si no hay punto
             if !number_string_for_decimal.contains('.') && final_decimal_places > 0 {
-                 // Si no hay punto, agregamos los decimales al final para que Decimal pueda leerlo.
                  number_string_for_decimal.push_str(&format!(".{:0<width$}", "", width = final_decimal_places));
             }
-
-            // Si es solo "numeric" y decimal_places es 0, ajustamos la escala a 0.
-            if field_type.to_lowercase() == "numeric" && final_decimal_places == 0 {
-                final_decimal_places = 0;
-            } else if final_decimal_places == 0 {
-                 final_decimal_places = 2; // Estándar de 2 si es monto y no se especificó
+            
+            // Si el tipo es solo "numeric" y decimal_places es 0, mantener la escala en 0.
+            if field_type_lower == "numeric" && final_decimal_places == 0 {
+                // No hay cambio en final_decimal_places
+            } else if field_type_lower == "amount" && final_decimal_places == 0 {
+                 final_decimal_places = 2; // Estándar de 2 para montos si no se especificó
             }
         }
+        _ => return raw_trimmed.to_string(), // Si no es numérico, retornar el valor crudo
     }
     
-    // --- FASE 2: CONVERSIÓN Y FORMATEO DE SALIDA (Aplica si numeric_format_flag = true) ---
-    
-    // 3. Parsear a Decimal para precisión y manejo de escala
+    // --- FASE 2: CONVERSIÓN, ESCALA Y FORMATEO DE SALIDA ---
     let mut number = match Decimal::from_str(&number_string_for_decimal) {
         Ok(d) => d,
-        Err(_) => return raw_value.to_string(), // Retorna el original si falla el parseo
+        Err(_) => return raw_value.to_string(),
     };
 
-    // Ajustamos la escala a la cantidad de decimales deseada para el formato de salida
+    // Ajustar la escala
     number.set_scale(final_decimal_places as u32).expect("Fallo al configurar la escala.");
 
-    if !numeric_format_flag {
-        // Si no se pide reformatear, devolvemos la representación de string con el punto decimal estándar.
-        // Si los decimales son 0, usamos to_string() para evitar decimales.
-        return if final_decimal_places == 0 {
-            number.to_string()
-        } else {
-            // Reemplazar el punto por coma para el formato de salida final
-            number.to_string().replace('.', ",")
-        };
+    if !format_numeric {
+        // Devolver formato estándar (punto decimal)
+        return number.to_string().replace('.', ",");
     }
 
-    // --- REFORMATEO DE SALIDA (Separadores de Miles y Decimales) ---
+    // --- REFORMATEO (Punto para miles, Coma para decimal) ---
 
-    // Obtener la representación de string del número ya con la escala correcta
     let number_string = number.to_string();
     let parts: Vec<&str> = number_string.split('.').collect();
     
@@ -112,11 +108,12 @@ fn format_field_value(
     // 4. Aplicar Separador de Miles (Punto '.')
     let mut final_integer = String::new();
     let mut count = 0;
+    let mut is_negative = false;
 
     for char in integer_part.chars().rev() {
         if char == '-' {
-            final_integer.push(char);
-            continue;
+            is_negative = true;
+            continue; // Saltar el signo en el bucle de formateo
         }
         if count > 0 && count % 3 == 0 {
             final_integer.push('.'); 
@@ -125,44 +122,51 @@ fn format_field_value(
         count += 1;
     }
     
-    let formatted_integer_part: String = final_integer.chars().rev().collect();
-
+    let mut formatted_integer_part: String = final_integer.chars().rev().collect();
+    
+    if is_negative {
+        // Añadir el signo negativo al principio
+        formatted_integer_part.insert(0, '-');
+    }
+    
     // 5. Ensamblar el resultado final (ej: 1.234.567,89)
-    // Usamos coma para el separador decimal.
     format!("{},{}", formatted_integer_part, decimal_part)
 }
 
-/// Procesa el archivo de datos de longitud fija y lo escribe a la salida estándar como CSV.
-pub fn process_file(file_path: &str, 
-                    fields: &[FieldDefinition],
-                    schema: &ConfigSchema,
-                    delim_character: &str,
-                    long_format: bool,
-                    format_numeric: bool,
-                    dont_use_tables: bool,
-                ) -> Result<(), Box<dyn Error>> {
+
+/// Procesa el archivo de datos de longitud fija, aplica lookups y formateo,
+/// y devuelve un vector de registros listos para imprimir.
+pub fn parse_to_records(file_path: &str, 
+                        fields: &[FieldDefinition],
+                        schema: &ConfigSchema,
+                        format_numeric: bool,
+                        dont_use_tables: bool,
+                    ) -> Result<(Vec<String>, Vec<Vec<String>>), Box<dyn Error>> {
     
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
-    let mut output = io::stdout().lock();
     
-    // --- 1. Escribir Encabezado ---
-    if long_format {
-        writeln!(output, "#,Columna,Valor")?;
-    } else {
-        let header: Vec<String> = fields.iter().map(|f| f.nombre.clone()).collect();
-        writeln!(output, "{}", header.join(delim_character))?;
-    }
-    
-    for (row_index, line_result) in reader.lines().enumerate() {
+    // 1. Obtener encabezados
+    let headers: Vec<String> = fields.iter().map(|f| f.nombre.clone()).collect();
+    let mut records: Vec<Vec<String>> = Vec::new();
+
+    // 2. Iterar por las lineas del archivo
+    for line_result in reader.lines() {
         let line = line_result?;
-        let row_num = row_index + 1; // Contar desde 1 para el usuario final
         let mut start_pos = 0;
         let mut record_parts = Vec::new();
 
-        // 3. Iterar sobre la definición de campos para extraer los datos
+        // 3. Procesamos cada columna
         for field in fields.iter() {
             let end_pos = start_pos + field.len;
+
+            // Asegurarse de no exceder la longitud de la línea
+            if end_pos > line.len() {
+                eprintln!("Advertencia: Línea demasiado corta. Campo '{}' incompleto.", field.nombre);
+                record_parts.push("".to_string());
+                break;
+            }
+
             let raw_value = line[start_pos..end_pos].trim().to_string();
             let mut final_value = raw_value.clone();
 
@@ -172,24 +176,13 @@ pub fn process_file(file_path: &str,
                 let table_name = &field.param1; 
                 if let Some(table) = schema.tables.get(table_name) {
                     if let Some(lookup_value) = table.get(&raw_value) {
-                        let value = lookup_value.clone();
-                        final_value = format!("{raw_value} - {value}");
+                        // Concatenar valor crudo y descripción
+                        final_value = format!("{raw_value} - {lookup_value}");
                     }
                 }
             }
-            // *****************************************            
-            
 
-            // Asegurarse de no exceder la longitud de la línea
-            if end_pos > line.len() {
-                // Manejo de error si la línea es más corta de lo esperado
-                eprintln!("Advertencia: Línea demasiado corta en registro. Ignorando campo '{}'.", field.nombre);
-                record_parts.push("".to_string());
-                break;
-            }
-
-            final_value = final_value.trim().to_string();
-
+            // ***************************************** // Aplicar formateo numérico si es necesario
             if field.tipo == "zamount" || field.tipo == "amount" {
                 final_value = format_field_value(&final_value, 
                                                 &field.tipo, 
@@ -197,25 +190,82 @@ pub fn process_file(file_path: &str,
                                                 field.param1.parse::<usize>().unwrap_or(2) // Decimales
                 ); 
             }
-                        
             
-            if long_format {
-                writeln!(output, "{},\"{}\",\"{}\"", row_num, field.nombre, final_value)?;
-            } else {
-                // Almacenar para salida ancha normal
-                record_parts.push(final_value);
-            }
+            // 4. Almacenar el valor final
+            record_parts.push(final_value);
             start_pos = end_pos;
         }
 
-        // 4. Escribir la línea como CSV a la salida estándar
-        if !long_format {
-            writeln!(output, "{}", record_parts.join(delim_character))?;
+        records.push(record_parts);
+    }
+
+    Ok((headers, records))
+}
+
+
+// =========================================================================
+// LÓGICA DE VISUALIZACIÓN (CSV / Long Format)
+// =========================================================================
+
+pub fn write_output(
+    output_typr: &str,
+    headers: Vec<String>,
+    records: Vec<Vec<String>>,
+    delim_character: &str,
+    long_format: bool,
+) -> Result<(), Box<dyn Error>> {
+    match output_typr {
+        "csv" => write_csv_output(headers, records, delim_character, long_format),
+        _ => Err(format!("Tipo de salida desconocido: {}", output_typr).into()),
+    }
+}
+
+/// Escribe los registros procesados a la salida estándar en formato CSV o Long Format.
+pub fn write_csv_output(
+    headers: Vec<String>,
+    records: Vec<Vec<String>>,
+    delim_character: &str,
+    long_format: bool,
+) -> Result<(), Box<dyn Error>> {
+    let mut output = io::stdout().lock();
+    
+    // Escribir Encabezado
+    if long_format {
+        writeln!(output, "#,Columna,Valor")?;
+    } else {
+        writeln!(output, "{}", headers.join(delim_character))?;
+    }
+    
+    // Escribir Registros
+    for (row_index, record) in records.iter().enumerate() {
+        let row_num = row_index + 1;
+        
+        if long_format {
+            // Formato largo (transpuesto)
+            for (col_index, value) in record.iter().enumerate() {
+                // Usamos el nombre de la columna del encabezado
+                let col_name = &headers[col_index]; 
+                // Usamos comillas para envolver el valor, en caso de que contenga el delimitador
+                writeln!(output, "{},\"{}\",\"{}\"", row_num, col_name, value.replace('"', "\"\""))?;
+            }
+        } else {
+            // Formato ancho (CSV normal)
+            // Escapamos las comillas en los valores y luego los unimos con el delimitador
+            let escaped_record: Vec<String> = record.iter()
+                .map(|v| format!("\"{}\"", v.replace('"', "\"\"")))
+                .collect();
+                
+            writeln!(output, "{}", escaped_record.join(delim_character))?;
         }
     }
 
     Ok(())
 }
+
+
+// =========================================================================
+// FUNCIONES AUXILIARES 
+// =========================================================================
 
 /// Calcula la longitud total de un registro basándose en la suma de las longitudes de sus campos.
 fn calculate_format_length(fields: &[FieldDefinition]) -> usize {
@@ -228,11 +278,8 @@ fn get_first_line_length(file_path: &str) -> Result<usize, Box<dyn Error>> {
     let mut reader = BufReader::new(file);
     let mut line = String::new();
 
-    // Leer la primera línea. Si está vacía o es solo un salto, puede causar problemas.
     reader.read_line(&mut line)?;
 
-    // La longitud debe ser la longitud del contenido útil, sin incluir el caracter de salto de línea (\n).
-    // Usamos .trim_end() para quitar el salto de línea y espacios al final.
     Ok(line.trim_end().len()) 
 }
 

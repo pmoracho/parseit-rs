@@ -4,8 +4,7 @@ mod parse;
 
 use clap::Parser;
 use std::error::Error;
-use parse::process_file;
-use crate::parse::deduce_format;
+use crate::parse::{deduce_format, parse_to_records, write_output};
 use crate::config::{ConfigSchema, FieldDefinition, FormatDefinition};
 use prettytable::{Table, format, row};
 
@@ -47,6 +46,10 @@ struct Args {
     /// Delimitador para la salida CSV (por defecto es ',').
     #[arg(long, short='c', default_value = ",")]
     delim_character: String,
+
+    /// Output type: Ejemplo: csv
+    #[arg(long, short='o', default_value = "csv")]
+    output_type: String,
 
     /// Genera la salida en formato largo (transpuesto): NumeroFila, NombreColumna, Valor
     #[arg(long, short='l', default_value_t = false)]
@@ -152,13 +155,29 @@ fn main() -> Result<(), Box<dyn Error>> {
     let format_def = schema.formats.get(&actual_format_name)
         .ok_or_else(|| format!("El formato '{}' no se encontró en {}", actual_format_name, CONFIG_FILE))?;
 
-    process_file(&args.data_file, 
-                &format_def.fields, 
-                &schema, 
-                &args.delim_character,
-                args.long_format,
-                args.format_numeric,
-                args.dont_use_tables)?;
+    // process_file(&args.data_file, 
+    //             &format_def.fields, 
+    //             &schema, 
+    //             &args.delim_character,
+    //             args.long_format,
+    //             args.format_numeric,
+    //             args.dont_use_tables)?;
+
+    let (headers, records) = parse_to_records(
+        &args.data_file,
+        &format_def.fields, // campos del formato
+        &schema,            // tablas de lookup
+        args.format_numeric,
+        args.dont_use_tables,
+    )?;    
+
+    write_output(
+        &args.output_type,
+        headers,
+        records,
+        &args.delim_character,
+        args.long_format,
+    )?;    
     
     Ok(())
 }

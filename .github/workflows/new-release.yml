@@ -5,7 +5,9 @@ on:
     tags:
       # Disparar la acción solo cuando se hace push a tags que empiezan por 'v'
       - 'v*' 
-
+permissions: # <--- ¡AÑADE ESTA SECCIÓN!
+  contents: write
+  
 env:
   # Deshabilitar la comprobación de código en tiempo de compilación para acelerar la compilación
   RUSTFLAGS: "-D warnings"

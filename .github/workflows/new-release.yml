@@ -78,10 +78,9 @@ jobs:
             os: ubuntu-latest
             asset_name_suffix: ""
             
-          # Build para Windows (x86_64)
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            asset_name_suffix: ".exe" # Binarios de Windows tienen extensión .exe
+          - target: x86_64-pc-windows-gnu # <-- CAMBIO CLAVE
+            os: ubuntu-latest            # Compilamos en Linux para el target Windows
+            asset_name_suffix: ".exe"            
 
     steps:
       - name: Checkout Code
@@ -93,6 +92,12 @@ jobs:
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+
+      - name: Install Mingw-w64 Cross Compiler
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64
           
       # Compilar el proyecto en modo release para el target
       - name: Build Project

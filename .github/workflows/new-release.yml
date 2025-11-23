@@ -118,13 +118,16 @@ jobs:
           # Determinar si usar .zip o .tar.gz
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             ARCHIVE_FILE_NAME="${ARCHIVE_NAME}.zip"
+            CONTENT_TYPE="application/zip"
           else
             ARCHIVE_FILE_NAME="${ARCHIVE_NAME}.tar.gz"
+            CONTENT_TYPE="application/gzip"
           fi
           
           echo "BINARY_FILE_NAME=$BINARY_FILE_NAME" >> $GITHUB_OUTPUT
           echo "ARCHIVE_FILE_NAME=$ARCHIVE_FILE_NAME" >> $GITHUB_OUTPUT
-          
+          echo "CONTENT_TYPE=$CONTENT_TYPE" >> $GITHUB_OUTPUT
+
       # Empaquetar el binario (tar.gz para Linux, zip para Windows)
       - name: Package Release Binary
         shell: bash
@@ -140,12 +143,12 @@ jobs:
             tar -czvf ${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }} ${{ steps.asset_vars.outputs.BINARY_FILE_NAME }}
           fi
           
-      # Subir el asset al Release creado anteriormente
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ needs.create_release.outputs.release_upload_url }}
           asset_path: target/${{ matrix.target }}/release/${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }}
           asset_name: ${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }}
+          asset_content_type: ${{ steps.asset_vars.outputs.CONTENT_TYPE }} 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

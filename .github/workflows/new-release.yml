@@ -106,15 +106,14 @@ jobs:
           # Nombre del archivo empaquetado (ej: parseit-x86_64-linux.tar.gz)
           ARCHIVE_NAME=${{ env.BINARY_NAME }}-${{ matrix.target }}
           
-          # Determinar si usar .zip o .tar.gz
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
+          if [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
             ARCHIVE_FILE_NAME="${ARCHIVE_NAME}.zip"
             CONTENT_TYPE="application/zip"
           else
             ARCHIVE_FILE_NAME="${ARCHIVE_NAME}.tar.gz"
             CONTENT_TYPE="application/gzip"
           fi
-          
+
           echo "BINARY_FILE_NAME=$BINARY_FILE_NAME" >> $GITHUB_OUTPUT
           echo "ARCHIVE_FILE_NAME=$ARCHIVE_FILE_NAME" >> $GITHUB_OUTPUT
           echo "CONTENT_TYPE=$CONTENT_TYPE" >> $GITHUB_OUTPUT
@@ -126,8 +125,8 @@ jobs:
           cd target/${{ matrix.target }}/release
           
           # Usamos un if/else para manejar diferentes formatos de compresión
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            # Windows (zip)
+          if [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
+            # Windows (zip) - Comando zip debe estar instalado (ya lo aseguramos arriba)
             zip ${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }} ${{ steps.asset_vars.outputs.BINARY_FILE_NAME }}
           else
             # Linux (tar.gz)

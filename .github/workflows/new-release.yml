@@ -144,7 +144,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ needs.create_release.outputs.release_upload_url }}
-          asset_path: ${{ github.workspace }}/target/${{ matrix.target }}/release/${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }}
+          asset_path: target/${{ matrix.target }}/release/${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }}
           asset_name: ${{ steps.asset_vars.outputs.ARCHIVE_FILE_NAME }}
           asset_content_type: ${{ steps.asset_vars.outputs.CONTENT_TYPE }} 
         env:

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# setear y desetear variable de entorno para hacer override de este hook
+# Windows (cmd):
+#    SET DISABLE_GIT_HOOK=1
+#    SET DISABLE_GIT_HOOK=
+
+# Windows (powersehell):
+#    $env:DISABLE_GIT_HOOK=1
+#    rm env:DISABLE_GIT_HOOK
+# Linux / Mac:
+#    export DISABLE_GIT_HOOK=1
+#    unset DISABLE_GIT_HOOK
+# O bien:
+#   git commit -m "Mensaje del commit" --no-verify
+#
+
+git_disable_hook="DISABLE_GIT_HOOK"
+patterns="password passw user usuario token secret api_key credentials connectionstring salt"
+
+search_patterns() {
+
+    for pattern in $patterns; do
+        grep_output=$(git grep -E -i "\b$pattern\b" $(git diff --cached --name-only))
+        if [ -n "$grep_output" ]; then
+            echo "$grep_output"
+        fi
+    done
+
+}
+
+search_result=$(search_patterns)
+
+if [ -n "$search_result" ]; then
+    if [ -z "$DISABLE_GIT_HOOK" ]; then
+
+        echo "ERROR: Hay datos sensibles en el commit. Imposible seguir."
+        echo "----------------------------------------------------------"
+        echo "$search_result"
+        exit 2
+
+    else
+
+        echo "Cuidado!!: Hay datos sensibles en el commit."
+        echo "Git hook deshabilitado! el commit se confirma bajo su responsabilidad"
+        echo "---------------------------------------------------------------------"
+        echo "$search_result"
+
+    fi
+fi

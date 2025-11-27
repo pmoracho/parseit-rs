@@ -1,12 +1,19 @@
-// src/main.rs
+//! parseit-rs: Herramienta para interpretar archivos de longitud fija del ARCA.
+//! (entre otros formatos).
+//! Proporciona funcionalidades para cargar configuraciones desde archivos TOML,
+//! deducir formatos automáticamente, parsear archivos de datos y generar salidas en varios formatos
+//! (CSV, terminal interactivo).
+//!  
 mod config;
 mod parse;
+mod io;
 
 use clap::Parser;
 use std::error::Error;
-use crate::parse::{deduce_format, parse_to_records, write_output};
-use crate::config::{ConfigSchema, FieldDefinition, FormatDefinition};
 use prettytable::{Table, format, row};
+use crate::parse::{deduce_format, parse_to_records};
+use crate::io::{write_output};
+use crate::config::{CONFIG_FILE, ConfigSchema, FormatDefinition, calculate_format_length};
 
 // Estructura de ayuda para almacenar y ordenar los datos
 struct FormatData<'a> {
@@ -15,6 +22,7 @@ struct FormatData<'a> {
     count: usize,
     total_len: usize,
 }
+
 const PROGRAM_AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 const BANNER: &str = const_format::formatcp!(r#"
 
@@ -67,7 +75,21 @@ struct Args {
     show_formats: bool,
 }
 
-// Función auxiliar para mostrar los formatos usando prettytable y ordenando por categoría/nombre
+/// Función auxiliar para mostrar los formatos usando prettytable y ordenando por categoría/nombre
+/// 
+/// ## Argumentos
+/// - `formats`: Mapa de nombres de formatos a sus definiciones.
+/// 
+/// ## Retorno
+/// Nada. Imprime la tabla directamente en la salida estándar.
+/// 
+/// ## Errores
+/// No retorna errores.
+///
+/// ## Ejemplo
+/// ```
+/// display_available_formats(&schema.formats);
+/// ```
 fn display_available_formats(formats: &std::collections::HashMap<String, FormatDefinition>) {
     let mut table = Table::new();
     
@@ -78,9 +100,7 @@ fn display_available_formats(formats: &std::collections::HashMap<String, FormatD
     // 2. Pre-procesar los datos y construir el vector de FormatData
     let mut processed_data: Vec<FormatData> = formats.iter()
         .map(|(name, definition)| {
-            // Extraer la categoría: usamos la parte antes del primer guion '-'
-            let category = name.split('-').next().unwrap_or(name).to_string();
-            
+            let category = definition.category.clone();
             FormatData {
                 category,
                 name,
@@ -112,10 +132,6 @@ fn display_available_formats(formats: &std::collections::HashMap<String, FormatD
     table.printstd();
 }
 
-// Asegúrate de que esta función exista
-fn calculate_format_length(fields: &[FieldDefinition]) -> usize {
-    fields.iter().map(|f| f.len).sum()
-}
 
 // --------------------------------------------------------------------------------------------------------
 // --- Función Principal ---
@@ -125,11 +141,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     // Cargar la configuración
-    const CONFIG_FILE: &str = "parseit.toon";
-    let schema: ConfigSchema = match config::load_config(CONFIG_FILE) {
+    let schema: ConfigSchema = match config::load_config_from_paths() {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error al cargar el esquema de configuración ({}): {}", CONFIG_FILE, e);
             return Err(e);
         }
     };
@@ -155,13 +169,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let format_def = schema.formats.get(&actual_format_name)
         .ok_or_else(|| format!("El formato '{}' no se encontró en {}", actual_format_name, CONFIG_FILE))?;
 
-    // process_file(&args.data_file, 
-    //             &format_def.fields, 
-    //             &schema, 
-    //             &args.delim_character,
-    //             args.long_format,
-    //             args.format_numeric,
-    //             args.dont_use_tables)?;
 
     let (headers, records) = parse_to_records(
         &args.data_file,
@@ -169,14 +176,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         &schema,            // tablas de lookup
         args.format_numeric,
         args.dont_use_tables,
+        args.long_format,
     )?;    
 
     write_output(
         &args.output_type,
         headers,
         records,
-        &args.delim_character,
-        args.long_format,
+        &args.delim_character
     )?;    
     
     Ok(())

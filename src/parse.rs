@@ -1,12 +1,35 @@
+//! Módulo de análisis para parseit-rs.
+//! Proporciona funciones para deducir el formato de un archivo de longitud fija
+//! y para parsear los datos aplicando lookups y formateo numérico.
+//! 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufReader, BufRead, Write};
 use std::error::Error;
-use crate::config::{ConfigSchema, FieldDefinition, FormatDefinition};
 use rust_decimal::Decimal;
 use std::str::FromStr;
+use std::io::{BufReader, BufRead};
+use encoding_rs::WINDOWS_1252; // O usa ISO_8859_1
+use crate::config::{ConfigSchema, FieldDefinition, FormatDefinition, calculate_format_length};
+use crate::io::get_first_line_length;
 
 /// Formatea una cadena numérica de entrada basada en el tipo de campo y las opciones de salida.
+/// ## Argumentos
+/// - `raw_value`: Valor crudo extraído del archivo de datos.
+/// - `field_type`: Tipo de dato (ej: "zamount", "amount", "numeric").
+/// - `format_numeric`: Indica si se debe aplicar formateo numérico con separadores.
+/// - `decimal_places`: Cantidad de decimales implícitos/deseados.
+/// 
+/// ## Retorno
+/// String - Retorna la cadena formateada según las reglas especificadas.
+/// 
+/// ## Errores
+/// No retorna errores, pero si la conversión falla, devuelve el valor crudo.
+/// 
+/// ## Ejemplo
+/// ```
+/// let formatted = format_field_value("00012345", "zamount", true, 2);
+/// assert_eq!(formatted, "123,45");
+/// ```
 fn format_field_value(
     raw_value: &str,
     field_type: &str, // Ej: "zamount", "amount", "numeric"
@@ -136,23 +159,49 @@ fn format_field_value(
 
 /// Procesa el archivo de datos de longitud fija, aplica lookups y formateo,
 /// y devuelve un vector de registros listos para imprimir.
+/// 
+/// ## Argumentos
+/// - `file_path`: Ruta al archivo de datos.
+/// - `fields`: Definiciones de campos del formato seleccionado.
+/// - `schema`: Esquema de configuración cargado.
+/// - `format_numeric`: Indica si se debe aplicar formateo numérico con separadores.
+/// - `dont_use_tables`: Indica si se deben evitar las tablas de lookup.
+/// - `long_format`: Indica si se debe devolver la salida en formato largo.
+/// 
+/// ## Retorno
+/// `Result<(Vec<String>, Vec<Vec<String>>), Box<dyn Error>>` -
+/// Tupla con encabezados y registros procesados, o un error.
+/// 
+/// ## Errores
+/// Retorna un error si no se puede abrir o leer el archivo.
+/// 
+/// ## Ejemplo
+/// ```
+/// let (headers, records) = parse_to_records("data.dat", &fields, &schema, true, false, false)?;
+/// ``` 
 pub fn parse_to_records(file_path: &str, 
                         fields: &[FieldDefinition],
                         schema: &ConfigSchema,
                         format_numeric: bool,
                         dont_use_tables: bool,
+                        long_format: bool,
                     ) -> Result<(Vec<String>, Vec<Vec<String>>), Box<dyn Error>> {
     
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
-    
+
     // 1. Obtener encabezados
     let headers: Vec<String> = fields.iter().map(|f| f.nombre.clone()).collect();
     let mut records: Vec<Vec<String>> = Vec::new();
 
     // 2. Iterar por las lineas del archivo
-    for line_result in reader.lines() {
-        let line = line_result?;
+    for line_result in reader.split(b'\n') {
+        
+        let buffer = line_result?;
+        
+        let (cow, _, _) = WINDOWS_1252.decode(&buffer);
+        let line = cow.to_string(); // Convertir a String propia
+
         let mut start_pos = 0;
         let mut record_parts = Vec::new();
 
@@ -199,91 +248,61 @@ pub fn parse_to_records(file_path: &str,
         records.push(record_parts);
     }
 
+    // Si se solicita formato largo, aplanamos los registros aquí y devolvemos
+    // encabezado y registros ya listos para escribir (cada fila tendrá
+    // tres columnas: número de fila, nombre de columna y valor).
+    if long_format {
+        let flat_headers = vec!["#".to_string(), "Columna".to_string(), "Valor".to_string()];
+        let mut flat_records: Vec<Vec<String>> = Vec::new();
+
+        for (row_index, record) in records.iter().enumerate() {
+            let row_num = (row_index + 1).to_string();
+            for (col_index, value) in record.iter().enumerate() {
+                let col_name = headers.get(col_index).cloned().unwrap_or_else(|| format!("col_{}", col_index + 1));
+                flat_records.push(vec![row_num.clone(), col_name, value.clone()]);
+            }
+        }
+
+        return Ok((flat_headers, flat_records));
+    }
+
     Ok((headers, records))
 }
 
 
-// =========================================================================
-// LÓGICA DE VISUALIZACIÓN (CSV / Long Format)
-// =========================================================================
-
-pub fn write_output(
-    output_typr: &str,
-    headers: Vec<String>,
-    records: Vec<Vec<String>>,
-    delim_character: &str,
-    long_format: bool,
-) -> Result<(), Box<dyn Error>> {
-    match output_typr {
-        "csv" => write_csv_output(headers, records, delim_character, long_format),
-        _ => Err(format!("Tipo de salida desconocido: {}", output_typr).into()),
-    }
-}
-
-/// Escribe los registros procesados a la salida estándar en formato CSV o Long Format.
-pub fn write_csv_output(
-    headers: Vec<String>,
-    records: Vec<Vec<String>>,
-    delim_character: &str,
-    long_format: bool,
-) -> Result<(), Box<dyn Error>> {
-    let mut output = io::stdout().lock();
-    
-    // Escribir Encabezado
-    if long_format {
-        writeln!(output, "#,Columna,Valor")?;
-    } else {
-        writeln!(output, "{}", headers.join(delim_character))?;
-    }
-    
-    // Escribir Registros
-    for (row_index, record) in records.iter().enumerate() {
-        let row_num = row_index + 1;
-        
-        if long_format {
-            // Formato largo (transpuesto)
-            for (col_index, value) in record.iter().enumerate() {
-                // Usamos el nombre de la columna del encabezado
-                let col_name = &headers[col_index]; 
-                // Usamos comillas para envolver el valor, en caso de que contenga el delimitador
-                writeln!(output, "{},\"{}\",\"{}\"", row_num, col_name, value.replace('"', "\"\""))?;
-            }
-        } else {
-            // Formato ancho (CSV normal)
-            // Escapamos las comillas en los valores y luego los unimos con el delimitador
-            let escaped_record: Vec<String> = record.iter()
-                .map(|v| format!("\"{}\"", v.replace('"', "\"\"")))
-                .collect();
-                
-            writeln!(output, "{}", escaped_record.join(delim_character))?;
-        }
-    }
-
-    Ok(())
-}
-
-
-// =========================================================================
-// FUNCIONES AUXILIARES 
-// =========================================================================
-
-/// Calcula la longitud total de un registro basándose en la suma de las longitudes de sus campos.
-fn calculate_format_length(fields: &[FieldDefinition]) -> usize {
-    fields.iter().map(|f| f.len).sum()
-}
-
-/// Lee la primera línea del archivo de datos y devuelve su longitud.
-fn get_first_line_length(file_path: &str) -> Result<usize, Box<dyn Error>> {
-    let file = File::open(file_path)?;
-    let mut reader = BufReader::new(file);
-    let mut line = String::new();
-
-    reader.read_line(&mut line)?;
-
-    Ok(line.trim_end().len()) 
-}
-
-/// Intenta identificar el formato comparando la longitud del archivo con las longitudes de todos los formatos.
+/// Intenta identificar el formato de un archivo de datos comparando la longitud 
+/// de su primer registro con las longitudes predefinidas en el esquema de configuración.
+///
+/// Este proceso es crucial para determinar qué conjunto de reglas de análisis (schema)
+/// debe aplicarse al archivo de longitud fija.
+///
+/// ## Argumentos
+///
+/// * `file_path`: La ruta al archivo de datos de longitud fija que se va a analizar.
+/// * `formats`: Un mapa de todas las definiciones de formato disponibles (`FormatDefinition`) 
+///              extraídas del archivo de configuración.
+///
+/// ## Retorno
+/// `Result<String, Box<dyn Error>>`.
+/// * **`Ok(String)`**: Contiene el nombre del formato cuya longitud de registro coincide.
+/// * **`Err(Box<dyn Error>)`**: Si no se encuentra ninguna coincidencia o si hay un error de lectura del archivo.
+///
+/// ## Errores
+///
+/// Retorna un error si:
+/// * No se puede abrir o leer la primera línea del archivo (`file_path`).
+/// * Ninguna `FormatDefinition` en `formats` coincide con la longitud del primer registro.
+///
+/// ## Ejemplo
+///
+/// ```ignore
+/// // Asumiendo que 'config_schema' ya está cargado y 'file_path' es válido.
+/// let formats = &config_schema.formats;
+/// match deduce_format("data.dat", formats) {
+///     Ok(name) => println!("Formato deducido: {}", name),
+///     Err(e) => eprintln!("Fallo al deducir el formato: {}", e),
+/// }
+/// ```
 pub fn deduce_format(
     file_path: &str, 
     formats: &HashMap<String, FormatDefinition>

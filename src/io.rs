@@ -38,8 +38,8 @@ pub fn write_output(
     ) -> Result<(), Box<dyn Error>> {
     match output_typr {
         "csv" => write_csv_output(headers, records, delim_character),
-        // 💡 Llama a la nueva write_interactive, que ya no necesita el argumento 'fields'
         "term" => write_interactive(headers, records),
+        "sql" => write_sql_output(headers, records),
         _ => Err(format!("Tipo de salida desconocido: {}", output_typr).into()),
     }
 }
@@ -181,4 +181,79 @@ pub fn get_first_line_length(file_path: &str) -> Result<usize, Box<dyn Error>> {
     let (cow, _, _) = WINDOWS_1252.decode(&buffer);
     let line = cow.to_string(); 
     Ok(line.trim_end().len()) 
+}
+/// Escribe un script SQL a la salida estándar, incluyendo la sentencia CREATE TABLE
+/// y las sentencias INSERT correspondientes a los registros.
+/// 
+/// ## Argumentos
+/// - `headers`: Encabezados de las columnas (usados como nombres de columna SQL).
+/// - `records`: Registros de datos (usados como valores a insertar).
+/// 
+/// ## Retorno
+/// `Result<(), Box<dyn Error>>` - Ok si la operación es exitosa, o un error en caso contrario.
+/// 
+/// ## Errores
+/// Retorna un error si falla la escritura en la salida estándar.
+/// 
+/// ## Ejemplo
+/// ```ignore
+/// // La tabla se llamará 'processed_data' por defecto.
+/// write_sql_output(headers, records)?;
+/// ```
+pub fn write_sql_output(
+    headers: Vec<String>,
+    records: Vec<Vec<String>>,
+    ) -> Result<(), Box<dyn Error>> {
+    
+    let mut output = io::stdout().lock();
+    const TABLE_NAME: &str = "processed_data";
+    
+    // Función auxiliar para limpiar nombres de columna (reemplazar caracteres especiales)
+    let clean_headers: Vec<String> = headers.iter()
+        .map(|h| h.replace(' ', "_").to_uppercase())
+        .collect();
+
+    // 1. Sentencia CREATE TABLE
+    writeln!(output, "--------------------------------------------------------")?;
+    writeln!(output, "-- DDL: Creación de tabla '{}'", TABLE_NAME)?;
+    writeln!(output, "--------------------------------------------------------")?;
+    writeln!(output, "DROP TABLE IF EXISTS {};", TABLE_NAME)?;
+    write!(output, "CREATE TABLE {} (\n", TABLE_NAME)?;
+    
+    let mut column_definitions = Vec::new();
+    // Asumimos que todos los campos serán VARCHAR o TEXT para simplificar y asegurar la compatibilidad.
+    for (i, header) in clean_headers.iter().enumerate() {
+        let definition = if i < clean_headers.len() - 1 {
+            format!("    {} VARCHAR(255) NULL,", header)
+        } else {
+            format!("    {} VARCHAR(255) NULL", header) // El último no lleva coma
+        };
+        column_definitions.push(definition);
+    }
+    
+    writeln!(output, "{}", column_definitions.join("\n"))?;
+    writeln!(output, ");\n")?;
+
+    // 2. Sentencias INSERT
+    writeln!(output, "--------------------------------------------------------")?;
+    writeln!(output, "-- DML: Inserción de {} registros", records.len())?;
+    writeln!(output, "--------------------------------------------------------")?;
+
+    for record in records.iter() {
+        // Escapamos las comillas internas (doble comilla) y envolvemos el valor con comillas simples para SQL
+        let escaped_values: Vec<String> = record.iter()
+            .map(|v| {
+                // Reemplazamos ' con '' (escape estándar SQL) y envolvemos en comillas simples
+                format!("'{}'", v.replace('\'', "''"))
+            })
+            .collect();
+
+        writeln!(output, "INSERT INTO {} ({}) VALUES ({});", 
+            TABLE_NAME, 
+            clean_headers.join(", "),
+            escaped_values.join(", ")
+        )?;
+    }
+
+    Ok(())
 }

@@ -3,6 +3,14 @@ name = "parseit"
 version = "0.1.0"
 edition = "2024"
 authors = ["Patricio Moracho\n<pmoracho@gmail.com>",]
+repository = "https://github.com/pmoracho/parseit-rs"
+description = "Herramienta para inerpretar archivos de longitud fija"
+
+[package.metadata.wix]
+upgrade-guid = "3F588898-8441-406D-98D9-71CC7F033402"
+path-guid = "8DF28319-F01C-4A53-AB2D-448FA84D5037"
+license = false
+eula = false
 
 [dependencies]
 csvlens = { version = "0.12.0", default-features = false, features = ["clipboard"] }    
@@ -22,3 +30,8 @@ opt-level = "z"  # Optimize for size.
 lto = true
 codegen-units = 1
 panic = "abort"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

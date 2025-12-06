@@ -29,7 +29,8 @@ const BANNER: &str = const_format::formatcp!(r#"
 ╔═╗╔═╗╦═╗╔═╗╔═╗╦╔╦╗
 ╠═╝╠═╣╠╦╝╚═╗║╣ ║ ║ 
 ╩  ╩ ╩╩╚═╚═╝╚═╝╩ ╩
-by {}"#, PROGRAM_AUTHORS);
+by {}
+powered by csvlens"#, PROGRAM_AUTHORS);
 
 // --- 1. Definición de Argumentos de Línea de Comandos (usando clap) ---
 #[derive(Parser, Debug)]
@@ -55,7 +56,12 @@ struct Args {
     #[arg(long, short='c', default_value = ",")]
     delim_character: String,
 
-    /// Output type: Ejemplo: csv
+    /// Tipo de salida 
+    /// 
+    /// Formatos soportados:
+    ///    csv -> Valores separados por coma
+    ///    term -> Visualización interactiva por medio de cvlens
+    ///     sql -> Script de creación e inserción de filas en una tabla 
     #[arg(long, short='o', default_value = "csv")]
     output_type: String,
 
@@ -71,6 +77,7 @@ struct Args {
     #[arg(long, short='t', default_value_t = false)]
     dont_use_tables: bool,
 
+    /// Mostrar los formatos soportados
     #[arg(short = 's', long, default_value_t = false)] 
     show_formats: bool,
 }

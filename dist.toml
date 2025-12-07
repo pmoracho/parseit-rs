@@ -1,0 +1,3 @@
+[[dist.extra-artifacts]]
+artifacts = ["parseit.toon", "RELEASE.md"]
+build = []

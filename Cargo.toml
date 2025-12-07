@@ -11,6 +11,7 @@ upgrade-guid = "3F588898-8441-406D-98D9-71CC7F033402"
 path-guid = "8DF28319-F01C-4A53-AB2D-448FA84D5037"
 license = false
 eula = false
+allow-dirty = ["./.github/workflows/release.yml"]
 
 [dependencies]
 csvlens = { version = "0.12.0", default-features = false, features = ["clipboard"] }    

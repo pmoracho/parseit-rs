@@ -1,6 +1,6 @@
 [package]
 name = "parseit"
-version = "1.0.1"
+version = "1.0.3"
 edition = "2024"
 authors = ["Patricio Moracho\n<pmoracho@gmail.com>",]
 repository = "https://github.com/pmoracho/parseit-rs"
@@ -35,3 +35,7 @@ panic = "abort"
 [profile.dist]
 inherits = "release"
 lto = "thin"
+
+copy_files = [
+    "parseit.toon",
+]

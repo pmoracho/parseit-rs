@@ -36,6 +36,7 @@ panic = "abort"
 inherits = "release"
 lto = "thin"
 
+[package.metadata.dist]
 copy_files = [
-    "./parseit.toon",
+    "parseit.toon",
 ]

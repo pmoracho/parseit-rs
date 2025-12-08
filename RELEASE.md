@@ -4,19 +4,29 @@
 
 ### ✨ Nuevas Características
 
-- **Tabla interactiva mejorada**: La vista TUI (`--output-type term`) ahora calcula automáticamente el ancho de cada columna basándose en la longitud declarada del campo (`FieldDefinition.len`) o el tamaño del título, tomando el mayor de ambos.
-- **Documentación completa**: Se han añadido doc-comments en español a todas las funciones públicas para mejorar la salida de `cargo doc`.
-- **Mejor manejo del formato largo**: El flag `--long-format` ahora genera salida correctamente en formato transpuesto (fila, columna, valor) tanto para CSV como para la vista TUI.
+- **Tabla interactiva mejorada**: La vista TUI (`--output-type term`) ahora
+  calcula automáticamente el ancho de cada columna basándose en la longitud
+  declarada del campo (`FieldDefinition.len`) o el tamaño del título, tomando el
+  mayor de ambos.
+- **Documentación completa**: Se han añadido doc-comments en español a todas las
+  funciones públicas para mejorar la salida de `cargo doc`.
+- **Mejor manejo del formato largo**: El flag `--long-format` ahora genera
+  salida correctamente en formato transpuesto (fila, columna, valor) tanto para
+  CSV como para la vista TUI.
 
 ### 🔧 Cambios
 
-- **Signature actualizado**: `write_interactive()` ahora recibe `fields: &[FieldDefinition]` para adaptar los anchos de columna.
-- **Enrutamiento mejorado**: `write_output()` pasa automáticamente las definiciones de campo a la función correspondiente.
-- **Documentación API**: Todas las funciones clave en `parse.rs` y `config.rs` tienen ahora bloques de documentación detallados.
+- **Signature actualizado**: `write_interactive()` ahora recibe `fields:
+  &[FieldDefinition]` para adaptar los anchos de columna.
+- **Enrutamiento mejorado**: `write_output()` pasa automáticamente las
+  definiciones de campo a la función correspondiente.
+- **Documentación API**: Todas las funciones clave en `parse.rs` y `config.rs`
+  tienen ahora bloques de documentación detallados.
 
 ### 🐛 Correcciones
 
-- Se corrigieron issues en la decodificación de caracteres especiales con `encoding_rs::WINDOWS_1252`.
+- Se corrigieron issues en la decodificación de caracteres especiales con
+  `encoding_rs::WINDOWS_1252`.
 - Mejoras en el handling de líneas de longitud variable o incompletas.
 
 ### 📦 Dependencias
@@ -48,9 +58,12 @@ ratatui             = (vía csvlens)
 
 ### ✨ Nuevas Características
 
-- **Soporte para formato largo**: Nuevo flag `--long-format` / `-l` que transpone la salida en formato (fila, columna, valor).
-- **Visualización TUI mejorada**: Tabla interactiva con navegación por teclado (`↑`, `↓`, `Home`, `End`, `q`).
-- **Lookups de tablas**: Sistema de enriquecimiento de datos mediante tablas de mapeo definidas en `parseit.toon`.
+- **Soporte para formato largo**: Nuevo flag `--long-format` / `-l` que
+  transpone la salida en formato (fila, columna, valor).
+- **Visualización TUI mejorada**: Tabla interactiva con navegación por teclado
+  (`↑`, `↓`, `Home`, `End`, `q`).
+- **Lookups de tablas**: Sistema de enriquecimiento de datos mediante tablas de
+  mapeo definidas en `parseit.toon`.
 
 ### 🔧 Cambios
 
@@ -69,13 +82,15 @@ ratatui             = (vía csvlens)
 
 ### ✨ Nuevas Características
 
-- **Deducción automática de formatos**: La herramienta detecta automáticamente el formato comparando la longitud del primer registro.
+- **Deducción automática de formatos**: La herramienta detecta automáticamente
+  el formato comparando la longitud del primer registro.
 - **Múltiples formatos de salida**: Soporte para CSV y terminal interactivo.
 - **Formateo numérico avanzado**: 
   - Soporte para tipos `zamount`, `amount` y `numeric`.
   - Decimales configurables.
   - Separadores de miles personalizables.
-- **Archivo de configuración TOML**: Definición flexible de formatos y tablas de lookup.
+- **Archivo de configuración TOML**: Definición flexible de formatos y tablas de
+  lookup.
 
 ### 🔧 Cambios
 
@@ -94,11 +109,13 @@ ratatui             = (vía csvlens)
 
 ### 🎉 Lanzamiento Inicial
 
-Primera versión estable de **parseit-rs**, reescritura completa del proyecto original `parseit` en Rust.
+Primera versión estable de **parseit-rs**, reescritura completa del proyecto
+original `parseit` en Rust.
 
 ### ✨ Características Principales
 
-- **Interpretación de registros de longitud fija**: Lee y parsea archivos de datos de longitud fija según esquemas definidos.
+- **Interpretación de registros de longitud fija**: Lee y parsea archivos de
+  datos de longitud fija según esquemas definidos.
 - **Configuración via TOML/TOON**: Archivos `parseit.toon` para definir formatos y tablas.
 - **Múltiples opciones de salida**:
   - CSV con delimitador configurable
@@ -135,24 +152,13 @@ cargo install --path . --force
 
 ---
 
-## Roadmap Futuro
 
-- [ ] Soporte para JSON como formato de salida.
-- [ ] Validación de esquemas con reglas personalizadas.
-- [ ] Caché de configuración para mejor rendimiento.
-- [ ] Soporte para archivos de entrada comprimidos (gzip, bzip2).
-- [ ] Plugin system para tipos de campos personalizados.
-- [ ] Modo batch para procesar múltiples archivos.
-- [ ] Integración con bases de datos (inserción directa).
-
----
 
 ## Notas de Compatibilidad
 
 ### Sistemas soportados
 
 - ✅ Linux (x86_64, aarch64)
-- ✅ macOS (Intel, Apple Silicon)
 - ✅ Windows (x86_64)
 
 ### Requisitos
@@ -181,7 +187,8 @@ Consulta el archivo `LICENSE` en el repositorio.
 ## Agradecimientos
 
 - Inspiración en el proyecto original [parseit](https://github.com/pmoracho/parseit).
-- Uso de librerías de la comunidad Rust: `clap`, `serde`, `ratatui`, `crossterm`, y muchas más.
+- Uso de librerías de la comunidad Rust:`csvlens`, `clap`, `serde`, `ratatui`,
+  `crossterm`, y muchas más.
 
 ---
 

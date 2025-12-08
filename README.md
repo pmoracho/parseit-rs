@@ -325,7 +325,7 @@ nueva sección `[formats.tunuevo]` con los campos correspondientes.
 
 **P: ¿Qué pasa si el archivo no tiene el formato esperado?**  
 R: La herramienta intentará deducir el formato. Si no encuentra coincidencia,
-mostrará un error indicando la longitud encontrada.
+mostrará un error.
 
 **P: ¿Puedo usar separadores personalizados en CSV?**  
 R: Sí, usa `--delim-character ";"` (o el separador que necesites).

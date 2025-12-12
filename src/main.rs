@@ -37,15 +37,21 @@ powered by csvlens"#, PROGRAM_AUTHORS);
 #[command(
     author,
     version, 
-    about = "Herramienta para inerpretar archivos de longitud fija del ARCA.", 
+    about = "Herramienta para interpretar archivos de longitud fija del (Ej. los del ARCA)", 
     long_about = r#"Esta utilidad fue diseñada para procesar registros de longitud fija 
 basados en esquemas definidos en archivos TOON, permitiendo formatos de 
 salida variados."#,
     before_help = BANNER,
+    help_template = 
+"{before-help}{about}
+
+{usage-heading}
+   {usage}
+{all-args}{after-help}" 
 )]
 struct Args {
     /// Ruta al archivo de datos de longitud fija a procesar.
-    #[arg(short, long, default_value = "")]
+    #[arg(name = "data_file")]
     data_file: String,
 
     /// Nombre del formato a usar de 'parseit.toon' (ej: "sample").
@@ -62,7 +68,16 @@ struct Args {
     ///    csv -> Valores separados por coma
     ///    term -> Visualización interactiva por medio de cvlens
     ///     sql -> Script de creación e inserción de filas en una tabla 
-    #[arg(long, short='o', default_value = "csv")]
+    #[arg(long, short='o', default_value = "csv",
+        // 1. **help:** La descripción corta que aparecerá en la columna.
+        help = "Tipo de salida (csv, term, sql)", 
+        
+        // 2. **long_help:** La descripción detallada con la lista de formatos.
+        long_help = "Tipo de salida.\n\n\
+                     Formatos soportados:\n\
+                     - csv: Valores separados por coma.\n\
+                     - term: Visualización interactiva con cvlens.\n\
+                     - sql: Script de creación e inserción de filas.")]
     output_type: String,
 
     /// Genera la salida en formato largo (transpuesto): NumeroFila, NombreColumna, Valor
@@ -163,7 +178,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // ----------------------------------------
 
     if args.data_file.is_empty() {
-        return Err("Error: Debe proporcionar la ruta al archivo de datos usando --data-file o -d.".into());
+        return Err("Error: Debe proporcionar la ruta al archivo de datos que se quiere procesar.".into());
     }    
 
     let actual_format_name = if let Some(name) = args.format_name {

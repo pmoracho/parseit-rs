@@ -8,6 +8,7 @@ use std::{error::Error, fs::File, io::{BufRead, BufReader}};
 use encoding_rs::WINDOWS_1252;
 use tempfile::NamedTempFile;
 use csvlens::{run_csvlens_with_options, CsvlensOptions};
+use prettytable::{Cell, Row, Table, format};
 
 use std::io::{self, Write};
 
@@ -40,6 +41,8 @@ pub fn write_output(
         "csv" => write_csv_output(headers, records, delim_character),
         "term" => write_interactive(headers, records),
         "sql" => write_sql_output(headers, records),
+        "txt" => write_txt_output(headers, records),
+        "html" => write_html_output(headers, records),
         _ => Err(format!("Tipo de salida desconocido: {}", output_typr).into()),
     }
 }
@@ -254,6 +257,124 @@ pub fn write_sql_output(
             escaped_values.join(", ")
         )?;
     }
+
+    Ok(())
+}
+
+/// Genera y escribe en stdout una tabla de texto formateada usando prettytable-rs.
+///
+/// Convierte los encabezados y registros proporcionados en un formato de tabla
+/// que es legible en la consola.
+///
+/// # Argumentos
+/// * `headers`: Un vector de Strings para los encabezados de las columnas.
+/// * `records`: Un vector de vectores de Strings, donde cada vector interno es una fila de datos.
+///
+/// # Retorno
+/// `Result<(), Box<dyn Error>>`: Retorna Ok(()) en caso de éxito o un Error.
+pub fn write_txt_output(
+    headers: Vec<String>,
+    records: Vec<Vec<String>>,
+) -> Result<(), Box<dyn Error>> {
+    
+    let mut table = Table::new();
+    
+    table.set_format(*format::consts::FORMAT_DEFAULT);
+    let header_cells: Vec<Cell> = headers.into_iter()
+        .map(|h| Cell::new(&h).style_spec("b")) // 'b' para negrilla (bold)
+        .collect();
+        
+    table.add_row(Row::new(header_cells));
+
+    for record in records {
+        let data_cells: Vec<Cell> = record.into_iter()
+            .map(|v| Cell::new(&v))
+            .collect();
+            
+        table.add_row(Row::new(data_cells));
+    }
+    table.printstd();
+    
+    Ok(())
+}
+
+/// Genera y escribe en stdout un documento HTML con una tabla de resultados.
+///
+/// Convierte los encabezados y registros proporcionados en la estructura
+/// <table>, <tr>, <th>, y <td> de HTML.
+///
+/// # Argumentos
+/// * `headers`: Un vector de Strings para los encabezados de las columnas.
+/// * `records`: Un vector de vectores de Strings, donde cada vector interno es una fila de datos.
+///
+/// # Retorno
+/// `Result<(), Box<dyn Error>>`: Retorna Ok(()) en caso de éxito o un Error.
+pub fn write_html_output(
+    headers: Vec<String>,
+    records: Vec<Vec<String>>,
+) -> Result<(), Box<dyn Error>> {
+    
+    let mut output = io::stdout().lock();
+
+    // 1. Escribir el encabezado del documento HTML
+    writeln!(output, "<!DOCTYPE html>")?;
+    writeln!(output, "<html>")?;
+    writeln!(output, "<head>")?;
+    writeln!(output, "  <meta charset=\"UTF-8\">")?;
+    writeln!(output, "  <title>Resultados de la Tabla</title>")?;
+    
+    // ⭐ Modificación del Estilo ⭐
+    writeln!(output, "  <style>")?;
+    // Base de la tabla
+
+    let css = "
+
+    ";
+
+    writeln!(output, "    table {{ border-collapse: break-word; margin: 20px; table-layout: auto; width: auto; }}")?; // Ajusta el ancho de la tabla y celdas
+    writeln!(output, "    th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}")?;
+    
+    // Encabezados (th)
+    writeln!(output, "    th {{ background-color: #f2f2f2; font-weight: bold; }}")?;
+    
+    // Estilo de rayas (Striping) para filas alternas (<tbody> tr:nth-child(even))
+    // nth-child(even) selecciona las filas pares (2da, 4ta, etc.)
+    writeln!(output, "    tbody tr:nth-child(even) {{ background-color: #e8f5e9; }}")?; // Color para filas pares
+    // nth-child(odd) selecciona las filas impares (1ra, 3ra, etc.)
+    writeln!(output, "    tbody tr:nth-child(odd) {{ background-color: #ffffff; }}")?; // Color para filas impares (blanco, para contraste)
+    
+    writeln!(output, "  </style>")?;
+    // Fin de estilos
+    
+    writeln!(output, "</head>")?;
+    writeln!(output, "<body>")?;
+    writeln!(output, "  <h1>Resultados Procesados</h1>")?;
+    writeln!(output, "  <table>")?;
+
+    // 2. Generar los encabezados (<thead> / <tr> / <th>)
+    writeln!(output, "    <thead>")?;
+    write!(output, "      <tr>")?;
+    for header in headers {
+        write!(output, "<th>{}</th>", header)?;
+    }
+    writeln!(output, "</tr>")?;
+    writeln!(output, "    </thead>")?;
+
+    // 3. Generar el cuerpo de la tabla (<tbody> / <tr> / <td>)
+    writeln!(output, "    <tbody>")?;
+    for record in records {
+        write!(output, "      <tr>")?;
+        for value in record {
+            write!(output, "<td>{}</td>", value)?;
+        }
+        writeln!(output, "</tr>")?;
+    }
+    writeln!(output, "    </tbody>")?;
+
+    // 4. Cerrar las etiquetas
+    writeln!(output, "  </table>")?;
+    writeln!(output, "</body>")?;
+    writeln!(output, "</html>")?;
 
     Ok(())
 }

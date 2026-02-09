@@ -7,7 +7,7 @@
 mod config;
 mod parse;
 mod io;
-
+mod helper;
 use clap::Parser;
 use std::error::Error;
 use prettytable::{Table, format, row};
@@ -52,15 +52,25 @@ salida variados."#,
 struct Args {
     /// Ruta al archivo de datos de longitud fija a procesar.
     #[arg(name = "data_file")]
-    data_file: String,
+    data_file: Option<String>,
 
     /// Nombre del formato a usar de 'parseit.toon' (ej: "sample").
     #[arg(short, long)]
     format_name: Option<String>,
     
     /// Delimitador para la salida CSV (por defecto es ',').
-    #[arg(long, short='c', default_value = ",")]
+    #[arg(long, short='d', default_value = ",")]
     delim_character: String,
+
+    /// Seleccion de columnas a mostrar. Si no se especifica, se muestran todas las columnas.
+    /// Ejemplo: --select-columns "1,3,5"
+    #[arg(long, short='c')]
+    select_columns: Option<String>,
+
+    /// Selección de filas a mostrar
+    /// Ejemplo: --select-rows "1-10,15,20-25"
+    #[arg(long, short='r')]
+    select_rows: Option<String>,
 
     /// Tipo de salida 
     /// 
@@ -77,6 +87,7 @@ struct Args {
                      Formatos soportados:\n\
                      - csv: Valores separados por coma.\n\
                      - term: Visualización interactiva con cvlens.\n\
+                     - html: Salida en formato HTML (tabla).\n\
                      - sql: Script de creación e inserción de filas.")]
     output_type: String,
 
@@ -177,14 +188,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     // ----------------------------------------
 
-    if args.data_file.is_empty() {
-        return Err("Error: Debe proporcionar la ruta al archivo de datos que se quiere procesar.".into());
-    }    
+    let data_file = match args.data_file {
+        Some(file) => file,
+        None => return Err("Error: Debe proporcionar la ruta al archivo de datos que se quiere procesar.".into()),
+    };
 
     let actual_format_name = if let Some(name) = args.format_name {
         name
     } else {
-        deduce_format(&args.data_file, &schema.formats)?
+        deduce_format(&data_file, &schema.formats)?
     };
 
     // Obtener el formato específico
@@ -193,7 +205,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 
     let (headers, records) = parse_to_records(
-        &args.data_file,
+        &data_file,
         &format_def.fields, // campos del formato
         &schema,            // tablas de lookup
         args.format_numeric,
@@ -205,7 +217,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         &args.output_type,
         headers,
         records,
-        &args.delim_character
+        &args.delim_character,
+        args.select_columns,
+        args.select_rows,
     )?;    
     
     Ok(())

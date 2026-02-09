@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Resultados de la Tabla</title>
+  <style>
+    table { border-collapse: break-word; margin: 20px; table-layout: auto; width: auto; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; font-weight: bold; }
+    tbody tr:nth-child(even) { background-color: #e8f5e9; }
+    tbody tr:nth-child(odd) { background-color: #ffffff; }
+  </style>
+</head>
+<body>
+  <h1>Resultados Procesados</h1>
+  <table>
+    <thead>
+      <tr><th>Fecha del comprobante</th><th>Tipo de comprobante</th><th>Punto de venta</th><th>Número de Comprobante</th><th>Número de Comprobante hasta</th><th>Código de documento del comprador</th><th>Número de identificación del comprador</th><th>Apellido y nombres del comprador</th><th>Importe total de la operación</th><th>Importe total de conceptos que no integran el precio neto gravado</th><th>Percepciones a no categorizados</th><th>Importe de operaciones exentas</th><th>Importe de percepciones o pagos a cuenta de impuestos nacionales</th><th>Importe de percepciones de Ingresos Brutos</th><th>Importe de percepciones de Impuestos Municipales</th><th>Importe de Impuestos Internos</th><th>Código de Moneda</th><th>Tipo de Cambio</th><th>Cantidad de alícuotas de IVA</th><th>Código de operación</th><th>Otros Tributos</th><th>Dummy</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>20231029</td><td>001 - FACTURAS A</td><td>47462</td><td>00000000025629897472</td><td>00000000025629897472</td><td>96 - DNI</td><td>00000000031372438606</td><td>Juan Perez Consultora</td><td>9823,13</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231029</td></tr>
+      <tr><td>20231011</td><td>011 - FACTURAS C</td><td>44061</td><td>00000000099596699758</td><td>00000000099596699758</td><td>80 - CUIT</td><td>00000000038903858533</td><td>Mariela Rodríguez</td><td>355,66</td><td>0,00</td><td>0,00</td><td>15,00</td><td>0,00</td><td>8,81</td><td>8000000000000,00</td><td>0,00</td><td>0PE</td><td>S000100000</td><td>0</td><td>1</td><td>A00000000000000</td><td>02023101</td></tr>
+      <tr><td>20231010</td><td>001 - FACTURAS A</td><td>92587</td><td>00000000071155708966</td><td>00000000071155708966</td><td>99 - Sin identificar/venta global diaria</td><td>00000000000000000000</td><td>CONSUMIDOR FINAL</td><td>2541,58</td><td>0,00</td><td>105,02</td><td>0,00</td><td>0,00</td><td>63,01</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231010</td></tr>
+      <tr><td>20231103</td><td>001 - FACTURAS A</td><td>49809</td><td>00000000037632831167</td><td>00000000037632831167</td><td>80 - CUIT</td><td>00000000021124974645</td><td>Juan Perez Consultora</td><td>9037,43</td><td>0,00</td><td>0,00</td><td>150,00</td><td>0,00</td><td>224,06</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231103</td></tr>
+      <tr><td>20231116</td><td>011 - FACTURAS C</td><td>85904</td><td>00000000037938418208</td><td>00000000037938418208</td><td>96 - DNI</td><td>00000000020119696521</td><td>Juan Perez Consultora</td><td>1980,31</td><td>10,50</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231116</td></tr>
+      <tr><td>20231006</td><td>001 - FACTURAS A</td><td>87433</td><td>00000000016264102400</td><td>00000000016264102400</td><td>96 - DNI</td><td>00000000034187792008</td><td>EMPRESA XYZ S.A.</td><td>2933,53</td><td>10,50</td><td>121,22</td><td>150,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231006</td></tr>
+      <tr><td>20231008</td><td>001 - FACTURAS A</td><td>10659</td><td>00000000055173274029</td><td>00000000055173274029</td><td>80 - CUIT</td><td>00000000029987258485</td><td>EMPRESA XYZ S.A.</td><td>7770,75</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231008</td></tr>
+      <tr><td>20231116</td><td>006 - FACTURAS B</td><td>11737</td><td>00000000070609192958</td><td>00000000070609192958</td><td>99 - Sin identificar/venta global diaria</td><td>00000000000000000000</td><td>CONSUMIDOR FINAL</td><td>1419,90</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>35,20</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231116</td></tr>
+      <tr><td>20231105</td><td>001 - FACTURAS A</td><td>69663</td><td>00000000005207790102</td><td>00000000005207790102</td><td>96 - DNI</td><td>00000000035198192475</td><td>DISTRIBUIDORA NORTE</td><td>7157,18</td><td>0,00</td><td>295,75</td><td>0,00</td><td>0,00</td><td>177,45</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231105</td></tr>
+      <tr><td>20231107</td><td>011 - FACTURAS C</td><td>09015</td><td>00000000062517650049</td><td>00000000062517650049</td><td>80 - CUIT</td><td>00000000023028869069</td><td>Juan Perez Consultora</td><td>2804,93</td><td>0,00</td><td>115,90</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>0,00</td><td>PES - PESOS</td><td>1,000000</td><td>1</td><td>A</td><td>0,00</td><td>20231107</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

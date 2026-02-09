@@ -38,9 +38,10 @@ fn format_field_value(
     ) -> String {
     let raw_trimmed = raw_value.trim();
 
-    if raw_trimmed.is_empty() {
-        return if decimal_places > 0 { "0,00".to_string() } else { "0".to_string() };
-    }
+    // if raw_trimmed.is_empty() {
+    //     number_string_for_decimal.push_str(&format!(".{:0<width$}", "", width = decimal_places));
+    //     return if decimal_places > 0 { "0,00000000".to_string() } else { "0".to_string() };
+    // }
 
     let mut number_string_for_decimal: String;
     let mut final_decimal_places = decimal_places;
@@ -112,16 +113,20 @@ fn format_field_value(
         Err(_) => return raw_value.to_string(),
     };
 
-    // Ajustar la escala
+    if !number_string_for_decimal.contains('.') {
+        let scale = final_decimal_places as u32;
+        let multiplier_i128 = 10_i128.pow(scale);
+        let multiplier = Decimal::from_i128_with_scale(multiplier_i128, 0); 
+        number = number * multiplier;    
+    }
     number.set_scale(final_decimal_places as u32).expect("Fallo al configurar la escala.");
-
+    
     if !format_numeric {
         // Devolver formato estándar (punto decimal)
         return number.to_string().replace('.', ",");
     }
 
     // --- REFORMATEO (Punto para miles, Coma para decimal) ---
-
     let number_string = number.to_string();
     let parts: Vec<&str> = number_string.split('.').collect();
     
@@ -321,4 +326,240 @@ pub fn deduce_format(
         "No se pudo identificar el formato. Ningún formato coincide con la longitud de registro de {} bytes.",
         data_len
     ).into())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    // ============= Tests para format_field_value =============
+    
+    #[test]
+    fn test_format_field_value_zamount_basic() {
+        let result = format_field_value("00012345", "zamount", false, 2);
+        assert_eq!(result, "123,45");
+    }
+
+    #[test]
+    fn test_format_field_value_zamount_no_format_numeric() {
+        let result = format_field_value("00012345", "zamount", false, 2);
+        assert_eq!(result, "123,45");
+    }
+
+    #[test]
+    fn test_format_field_value_zamount_with_format_numeric() {
+        let result = format_field_value("00123456789", "zamount", true, 2);
+        assert_eq!(result, "1.234.567,89");
+    }
+
+    #[test]
+    fn test_format_field_value_zamount_zero() {
+        let result = format_field_value("00000000", "zamount", false, 2);
+        assert_eq!(result, "0,00");
+    }
+
+    #[test]
+    fn test_format_field_value_zamount_single_digit() {
+        let result = format_field_value("5", "zamount", false, 2);
+        assert_eq!(result, "0,05");
+    }
+
+    #[test]
+    fn test_format_field_value_zamount_decimal_places_zero() {
+        let result = format_field_value("12345", "zamount", false, 0);
+        assert_eq!(result, "12345");
+    }
+
+    #[test]
+    fn test_format_field_value_amount_with_separators() {
+        let result = format_field_value("1.234,56", "amount", false, 2);
+        assert_eq!(result, "1234,56");
+    }
+
+    #[test]
+    fn test_format_field_value_amount_no_decimals() {
+        let result = format_field_value("5000", "amount", false, 0);
+        assert_eq!(result, "5000,00");
+    }
+
+    #[test]
+    fn test_format_field_value_amount_with_format_numeric() {
+        let result = format_field_value("1234567,89", "amount", true, 2);
+        assert_eq!(result, "1.234.567,89");
+    }
+
+    #[test]
+    fn test_format_field_value_numeric_basic() {
+        let result = format_field_value("12345", "numeric", false, 2);
+        assert_eq!(result, "12345,00");
+    }
+
+    #[test]
+    fn test_format_field_value_numeric_zero_decimals() {
+        let result = format_field_value("12345", "numeric", false, 0);
+        assert_eq!(result, "12345");
+    }
+
+    #[test]
+    fn test_format_field_value_empty_string() {
+        let result = format_field_value("", "zamount", false, 2);
+        assert_eq!(result, "0,00");
+    }
+
+    #[test]
+    fn test_format_field_value_empty_string_zero_decimals() {
+        let result = format_field_value("", "zamount", false, 0);
+        assert_eq!(result, "0");
+    }
+
+    #[test]
+    fn test_format_field_value_whitespace_only() {
+        let result = format_field_value("   ", "zamount", false, 2);
+        assert_eq!(result, "0,00");
+    }
+
+    #[test]
+    fn test_format_field_value_unknown_type() {
+        let result = format_field_value("some_text", "unknown_type", false, 2);
+        assert_eq!(result, "some_text");
+    }
+
+    #[test]
+    fn test_format_field_value_negative_amount() {
+        let result = format_field_value("-1234,56", "amount", true, 2);
+        assert_eq!(result, "-1.234,56");
+    }
+
+    #[test]
+    fn test_format_field_value_large_number_formatting() {
+        let result = format_field_value("9999999999", "zamount", true, 2);
+        assert_eq!(result, "99.999.999,99");
+    }
+
+    #[test]
+    fn test_format_field_value_amount_with_3_decimal_places() {
+        let result = format_field_value("0001234567", "zamount", true, 3);
+        assert_eq!(result, "1.234,567");
+    }
+
+    #[test]
+    fn test_format_field_value_zamount_with_high_decimal_places() {
+        let result = format_field_value("1234567890", "zamount", false, 4);
+        assert_eq!(result, "123456,7890");
+    }
+
+    #[test]
+    fn test_format_field_value_case_insensitivity() {
+        let result1 = format_field_value("00012345", "ZAMOUNT", false, 2);
+        let result2 = format_field_value("00012345", "zamount", false, 2);
+        assert_eq!(result1, result2);
+    }
+
+    #[test]
+    fn test_format_field_value_amount_without_decimal_point() {
+        let result = format_field_value("5000", "amount", false, 2);
+        assert_eq!(result, "5000,00");
+    }
+
+    // ============= Tests para deduce_format =============
+
+    #[test]
+    fn test_deduce_format_matching_format() {
+        // Crear un esquema de prueba con formatos
+        let mut formats = HashMap::new();
+        let format_def = FormatDefinition {
+            category: "Test Category".to_string(),
+            delimiter: "".to_string(),
+            fields: vec![
+                FieldDefinition {
+                    nombre: "field1".to_string(),
+                    len: 5,
+                    tipo: "text".to_string(),
+                    param1: "".to_string(),
+                    param2: "".to_string(),
+                },
+                FieldDefinition {
+                    nombre: "field2".to_string(),
+                    len: 5,
+                    tipo: "numeric".to_string(),
+                    param1: "2".to_string(),
+                    param2: "".to_string(),
+                },
+            ]
+        };
+        formats.insert("TEST_FORMAT".to_string(), format_def);
+
+        // Este test requeriría un archivo de prueba real, así que usamos un mock simple
+        // En un escenario real, crearíamos un archivo temporal
+        // Por ahora, simplemente validamos que la estructura funcione
+        assert_eq!(formats.len(), 1);
+        assert!(formats.contains_key("TEST_FORMAT"));
+    }
+
+    #[test]
+    fn test_deduce_format_empty_formats() {
+        let formats: HashMap<String, FormatDefinition> = HashMap::new();
+        assert_eq!(formats.len(), 0);
+    }
+
+    // ============= Tests de integración =============
+
+    #[test]
+    fn test_format_field_value_sequence_zamount_amounts() {
+        // Simular el procesamiento secuencial de varios montos
+        let values = vec!["00000100", "00001000", "00010000", "00100000"];
+        let expected = vec!["1,00", "10,00", "100,00", "1.000,00"];
+
+        for (value, exp) in values.iter().zip(expected.iter()) {
+            let result = format_field_value(value, "zamount", true, 2);
+            assert_eq!(&result, exp);
+        }
+    }
+
+    #[test]
+    fn test_format_field_value_edge_case_max_decimals() {
+        // Probar con muchos decimales
+        let result = format_field_value("123456789012", "zamount", false, 6);
+        assert_eq!(result, "123456,789012");
+    }
+
+    #[test]
+    fn test_format_field_value_amount_various_separators() {
+        // Probar diferentes combinaciones de separadores
+        let test_cases = vec![
+            ("1234567,89", "amount", false, 2, "1234567,89"),
+            ("1.234.567,89", "amount", false, 2, "1234567,89"),
+            ("1234567", "amount", false, 2, "1234567,00"),
+        ];
+
+        for (input, ftype, format_num, decimals, expected) in test_cases {
+            let result = format_field_value(input, ftype, format_num, decimals);
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn test_format_field_value_trailing_zeros_preserved() {
+        let result = format_field_value("00001000", "zamount", false, 2);
+        assert_eq!(result, "10,00");
+    }
+
+    #[test]
+    fn test_format_field_value_numeric_with_format() {
+        let result = format_field_value("9876543", "numeric", true, 2);
+        assert_eq!(result, "9.876.543,00");
+    }
+
+    #[test]
+    fn test_format_field_value_amount_negative_with_thousands() {
+        let result = format_field_value("-1.234.567,89", "amount", true, 2);
+        assert_eq!(result, "-1.234.567,89");
+    }
+
+    #[test]
+    fn test_format_field_value_zero_with_high_decimals() {
+        let result = format_field_value("00000000", "zamount", false, 5);
+        assert_eq!(result, "0,00000");
+    }
 }

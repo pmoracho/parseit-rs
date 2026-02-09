@@ -3,14 +3,15 @@
 //! También incluye utilidades para leer archivos de datos, como obtener la longitud de la primera línea
 //! de un archivo de longitud fija.
 //! 
+
 use std::{error::Error, fs::File, io::{BufRead, BufReader}};
 
 use encoding_rs::WINDOWS_1252;
 use tempfile::NamedTempFile;
 use csvlens::{run_csvlens_with_options, CsvlensOptions};
 use prettytable::{Cell, Row, Table, format};
-
 use std::io::{self, Write};
+use crate::helper::{resolve_columns, resolve_rows};
 
 /// Escribe los registros procesados a la salida estándar en el formato especificado.
 /// 
@@ -19,6 +20,8 @@ use std::io::{self, Write};
 /// - `headers`: Encabezados de las columnas.
 /// - `records`: Registros de datos.
 /// - `delim_character`: Carácter delimitador para CSV.
+/// - `selected_columns`: Opcional cadena que especifica las columnas a seleccionar (ej: "1,FECHA,3").
+/// - `selected_rows`: Opcional cadena que especifica las filas a seleccionar (ej: "1-10,15,20-25").
 /// 
 /// ## Retorno
 /// `Result<(), Box<dyn Error>>` - Ok si la operación es exitosa, o un error en caso contrario.
@@ -32,18 +35,46 @@ use std::io::{self, Write};
 /// write_output("csv", headers, records, ",")?;
 /// ```
 pub fn write_output(
-    output_typr: &str,
-    headers: Vec<String>,
-    records: Vec<Vec<String>>,
+    output_type: &str,
+    mut headers: Vec<String>,
+    mut records: Vec<Vec<String>>,
     delim_character: &str,
-    ) -> Result<(), Box<dyn Error>> {
-    match output_typr {
-        "csv" => write_csv_output(headers, records, delim_character),
+    selected_columns: Option<String>,
+    selected_rows: Option<String>,
+) -> Result<(), Box<dyn Error>> {
+
+    if let Some(cols_str) = selected_columns {
+        let indices = resolve_columns(&cols_str, &headers);
+        
+        if indices.is_empty() {
+            return Err("No se encontraron columnas válidas para los criterios seleccionados.".into());
+        }
+
+        // Filtrar headers
+        headers = indices.iter().map(|&i| headers[i].clone()).collect();
+        
+        // Filtrar records (proyectar solo las columnas deseadas)
+        records = records.into_iter()
+            .map(|row| indices.iter().map(|&i| row[i].clone()).collect())
+            .collect();
+    }
+
+    if let Some(rows_str) = selected_rows {
+        let indices = resolve_rows(&rows_str, records.len() - 1); 
+        if indices.is_empty() {
+            return Err("No se encontraron filas válidas para los criterios seleccionados.".into());
+        }
+        records = indices.iter().map(|&i| records[i].clone()).collect();
+    }
+
+    // Ahora despachamos los datos ya filtrados
+    match output_type {
+        "csv"  => write_csv_output(headers, records, delim_character),
         "term" => write_interactive(headers, records),
-        "sql" => write_sql_output(headers, records),
-        "txt" => write_txt_output(headers, records),
+        "sql"  => write_sql_output(headers, records),
+        "txt"  => write_txt_output(headers, records),
         "html" => write_html_output(headers, records),
-        _ => Err(format!("Tipo de salida desconocido: {}", output_typr).into()),
+        _ => Err(format!("Tipo de salida desconocido: {}", output_type).into()),
     }
 }
 
@@ -327,7 +358,7 @@ pub fn write_html_output(
     writeln!(output, "  <style>")?;
     // Base de la tabla
 
-    let css = "
+    let _css = "
 
     ";
 

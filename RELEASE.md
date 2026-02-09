@@ -1,5 +1,14 @@
 # Notas de Lanzamiento - parseit-rs
 
+## [1.0.5] - 2026-02-08
+
+### ✨ Nuevas Características
+
+- **Seleccion de columnas**: Nuevo parámetro `--select-columns`
+- **Seleccion de filas**: Nuevo parámetro `--select-rows`
+
+---
+
 ## [1.0.3] - 2025-12-06
 
 ### ✨ Nuevas Características
@@ -192,6 +201,6 @@ Consulta el archivo `LICENSE` en el repositorio.
 
 ---
 
-**Última actualización**: Diciembre 2025  
-**Versión actual**: 1.0.3  
+**Última actualización**: Febrero 2026  
+**Versión actual**: 1.0.5  
 **Autor**: Patricio Moracho <pmoracho@gmail.com>

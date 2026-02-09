@@ -26,6 +26,11 @@ seguridad y funcionalidades.
   de columna adaptativos.
 - ✅ **Configuración flexible**: Archivos de configuración en formato TOON.
 - ✅ **Decodificación robusta**: Soporta codificación WINDOWS-1252 (ISO-8859-1).
+- ✅ **Manejo de errores mejorado**: Mensajes claros para problemas comunes.
+- ✅ **Selección de columnas y filas**: Filtrado de datos para mostrar solo lo
+  relevante.
+- ✅ **Soporte multiplataforma**: Funciona en Linux, macOS y Windows.
+
 
 ## 📦 Instalación desde el código fuente
 
@@ -335,5 +340,36 @@ R: Los valores CSV se escapan automáticamente (comillas dobles se duplican).
 
 ---
 
-**Última actualización**: Diciembre 2025
+## Formatos ARCA soportados
+
+    ┌───────────────────┬────────────────────────────────┬──────────────┬────────────────┐
+    │ CATEGORÍA         │ NOMBRE DEL FORMATO             │ Nº DE CAMPOS │ LONGITUD TOTAL │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Arciba       │ arciba-creditos                │ 13           │ 119            │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Arciba       │ arciba-debitos                 │ 21           │ 215            │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Rg3685       │ compras-comprobantes           │ 25           │ 325            │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Rg3685       │ compras-comprobantes-alicuotas │ 8            │ 84             │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Rg3685       │ ventas-comprobantes            │ 22           │ 266            │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Rg3685       │ ventas-comprobantes-alicuotas  │ 6            │ 62             │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Sicore       │ sicore-retenciones             │ 17           │ 144            │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Sicore       │ sicore-sujetos                 │ 7            │ 83             │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Sifere       │ sifere-percepciones            │ 8            │ 51             │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Afip.Sifere       │ sifere-retenciones             │ 9            │ 79             │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Agip.Padrones     │ Padron-iibb-general            │ 12           │ 110            │
+    ├───────────────────┼────────────────────────────────┼──────────────┼────────────────┤
+    │ Ejemplos.Sencillo │ sample                         │ 3            │ 46             │
+    └───────────────────┴────────────────────────────────┴──────────────┴────────────────┘
+
+**Última actualización**: Febrero 2026  
+**Versión actual**: 1.0.5
 

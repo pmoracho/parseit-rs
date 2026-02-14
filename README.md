@@ -6,7 +6,7 @@ fija**. Está diseñada especialmente para trabajar con archivos de intercambio 
 datos con el ARCA, aunque soporta cualquier esquema de longitud fija definido en
 su archivo de configuración.
 
-Es una reescritura completa del proyecto original
+Es una reescritura completa del proyecto original en ***Python** 
 [parseit](https://github.com/pmoracho/parseit), con mejoras en rendimiento,
 seguridad y funcionalidades.
 
@@ -18,14 +18,15 @@ seguridad y funcionalidades.
   - CSV (valores separados por delimitador configurable)
   - Terminal interactivo (TUI basado en Ratatui y Csvlens)
   - Formato largo/transpuesto (fila, columna, valor)
+  - Salida HTML
 - ✅ **Formateo numérico inteligente**: Soporta montos (zamount, amount) con
   decimales configurables y separadores de miles.
 - ✅ **Lookup de tablas**: Enriquece datos con descripciones usando tablas de
-  mapeo externas.
+  mapeo externas. Ejemplo: cuando el ARCA pide un tipo de documento, en vez de mostrar "80" se muestra "80 - CUIT".
 - ✅ **Visualización TUI**: Tabla interactiva con navegación por teclado y anchos
-  de columna adaptativos.
+  de columna adaptativos, mediante **csvlens** y **ratatui**.
 - ✅ **Configuración flexible**: Archivos de configuración en formato TOON.
-- ✅ **Decodificación robusta**: Soporta codificación WINDOWS-1252 (ISO-8859-1).
+- ✅ **Decodificación robusta**: Soporta codificación WINDOWS-1252 (ISO-8859-1) además de UTF-8.
 - ✅ **Manejo de errores mejorado**: Mensajes claros para problemas comunes.
 - ✅ **Selección de columnas y filas**: Filtrado de datos para mostrar solo lo
   relevante.
@@ -127,36 +128,6 @@ La herramienta busca un archivo `parseit.toon` (formato TOML) en:
 1. Directorio actual (CWD)
 2. Directorio del ejecutable
 
-### Estructura del archivo de configuración
-
-```toml
-[formats]
-
-[formats.sample]
-category = "ARCA"
-delimiter = ","
-[[formats.sample.fields]]
-nombre = "idOperacion"
-len = 8
-tipo = "string"
-param1 = ""
-param2 = ""
-
-[[formats.sample.fields]]
-nombre = "monto"
-len = 10
-tipo = "zamount"
-param1 = "2"
-param2 = ""
-
-[tables]
-
-[tables.sifere-jurisdicciones]
-"01" = "Buenos Aires"
-"02" = "CABA"
-"03" = "Catamarca"
-```
-
 ### Tipos de campo soportados
 
 - `string`: Texto simple (sin procesamiento especial)
@@ -178,6 +149,10 @@ Cuando usas `--output-type term`, se abre una tabla interactiva con:
 - Las columnas se dimensionan automáticamente en función de `field.len` y el tamaño del título.
 - Las filas seleccionadas se destacan en amarillo.
 - Soporta desplazamiento horizontal para archivos muy anchos.
+
+**Nota**: La vista TUI es ideal para inspeccionar datos rápidamente sin salir del terminal. 
+Para más infomación, consultar el sitio de csvlens: https://github.com/YS-L/csvlens
+
 
 ## 📊 Formatos de salida
 
@@ -265,14 +240,16 @@ cargo build --release
 
 ## 📚 Dependencias
 
+- **csvlens**: Visualización TUI de tablas CSV
+- **serde**: Deserialización de archivos de configuración TOML
 - **clap**: Parseo de argumentos CLI
-- **serde**: Deserialización de TOML
-- **rust_decimal**: Aritmética decimal precisa
-- **encoding_rs**: Decodificación WINDOWS-1252
-- **ratatui**: UI de terminal interactiva
-- **crossterm**: Control de terminal
-- **prettytable-rs**: Tablas de texto
-- **toon-format**: Parseo de formato TOON
+- **const_format**: Formateo de cadenas en tiempo de compilación
+- **toon-format**: Parseo de formato TOON para configuraciones
+- **rust_decimal**: Aritmética decimal precisa para montos
+- **num-format**: Formateo de números con separadores de miles
+- **prettytable-rs**: Renderizado de tablas de texto para terminal
+- **encoding_rs**: Decodificación de archivos con codificación WINDOWS-1252
+- **tempfile**: Manejo de archivos temporales para tablas de lookup
 
 ## 🤝 Contribuciones
 
@@ -296,37 +273,11 @@ GitHub: [@pmoracho](https://github.com/pmoracho)
 
 ---
 
-## Ejemplos de casos de uso
-
-### Procesar datos ARCA y exportar a CSV
-
-```bash
-parseit -d archivo_arca.dat -f arca_format -o csv > salida.csv
-```
-
-### Inspeccionar datos de forma interactiva
-
-```bash
-parseit -d archivo_arca.dat -o term
-```
-
-### Obtener datos en formato largo para análisis posterior
-
-```bash
-parseit -d archivo_arca.dat --long-format -o csv | grep "monto"
-```
-
-### Aplicar formateo numérico y usar delimitador personalizado
-
-```bash
-parseit -d archivo_arca.dat --format-numeric -c ";" -o csv
-```
-
 ## ❓ Preguntas frecuentes (FAQ)
 
 **P: ¿Cómo defino un nuevo formato?**  
 R: Edita `parseit.toon` (en el CWD o directorio del ejecutable) y añade una
-nueva sección `[formats.tunuevo]` con los campos correspondientes.
+nueva clave debajo de `formats` con la estructura adecuada.
 
 **P: ¿Qué pasa si el archivo no tiene el formato esperado?**  
 R: La herramienta intentará deducir el formato. Si no encuentra coincidencia,
@@ -338,6 +289,11 @@ R: Sí, usa `--delim-character ";"` (o el separador que necesites).
 **P: ¿Cómo escapo caracteres especiales en los valores?**  
 R: Los valores CSV se escapan automáticamente (comillas dobles se duplican).
 
+**P: ¿Puedo procesar archivos con codificación diferente a UTF-8?**  
+R: Sí, se soporta WINDOWS-1252 (ISO-8859-1) para archivos provenientes del ARCA.
+
+**P: ¿Cómo puedo ver los formatos disponibles?**  
+R: Usa `parseit --show-formats` para listar los formatos definidos en la configuración.
 ---
 
 ## Formatos ARCA soportados

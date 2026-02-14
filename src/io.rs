@@ -165,7 +165,8 @@ pub fn write_interactive(
         filename: Some(file_path), 
         delimiter: Some(DELIMITER.to_string()),
         ignore_case: true,
-        debug: false, 
+        debug: false,
+        color_columns: true,
         ..Default::default()
     };
     
